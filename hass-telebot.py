@@ -16,8 +16,9 @@ import logging
 
 FORCE_RESTART = False
 FORCE_SHUTDOWN = False
+RESTART_CHAT_ID = None
 
-def restart_program():
+def restart_program(chat_id=None):
     """Restarts the current program, with file objects and descriptors
        cleanup
     """
@@ -30,7 +31,13 @@ def restart_program():
         logging.error(e)
 
     python = sys.executable
-    os.execl(python, python, *sys.argv)
+    args = sys.argv
+
+    while len(args) < 3:
+        args.append('')
+    args[2] = '--announce=' + (str(chat_id) if chat_id is not None else '')
+
+    os.execl(python, python, *args)
 
 # calls the HASS API to get the state of an entity
 # need to change this so you can pass in entity type so
@@ -160,11 +167,13 @@ class BotCommand(telepot.Bot):
         _, _, _, username, _ = parse_command(self.message)
         self.respond(deny_message().format(username))
 
-    def superadmin(self, username=None):
+    def is_admin(self, username=None):
+        global admins
+
         if username is None:
             _, _, _, username, _ = parse_command(self.message)
 
-        if username.lower() == allowed_users[0].lower():
+        if username.lower() in map(str.lower, admins):
             return True
         else:
             self.deny()
@@ -197,7 +206,7 @@ class BotCommand(telepot.Bot):
     @command
     def stop(self, message, **kwargs):
         """stop the bot"""
-        if not self.superadmin():
+        if not self.is_admin():
             return False
         self.respond('Goodbye for now!')
         global FORCE_SHUTDOWN
@@ -206,11 +215,16 @@ class BotCommand(telepot.Bot):
     @command
     def restart(self, message, **kwargs):
         """restart the bot"""
-        if not self.superadmin():
+        if not self.is_admin():
             return False
+
         self.respond('I will be right back!')
+
         global FORCE_RESTART
+        global RESTART_CHAT_ID
+
         FORCE_RESTART = True
+        _, _, RESTART_CHAT_ID, _, _ = parse_command(message)
 
     @command
     def rude(self, message, **kwargs):
@@ -281,8 +295,12 @@ class BotCommand(telepot.Bot):
         """arm in home mode"""
 
         payload = {'code': ha_alarm_code}
-        service_call('alarm_control_panel', 'alarm_arm_home', payload)
-        self.respond('Home alarm mode should be pending')
+
+        try:
+            service_call('alarm_control_panel', 'alarm_arm_home', payload)
+            self.respond('Home alarm mode should be pending')
+        except:
+            self.respond('An unknown error occurred')
 
     @command
     def armaway(self, message, **kwargs):
@@ -338,8 +356,13 @@ class BotCommand(telepot.Bot):
 parser = argparse.ArgumentParser()
 
 parser.add_argument('config', help='full path to config file', type=str)
+# parser.add_argument('-c', '--config', help='full path to config file', type=str, default='hass-telebot.conf')
+parser.add_argument('-a', '--announce', help='chat ID to announce resurrection', type=str)
+
 args = parser.parse_args()
+
 config_file = args.config
+announce_chat_id = args.announce
 
 # Read Config File
 config = ConfigObj(config_file, file_error=True)
@@ -353,7 +376,17 @@ ha_alarm_code = config['ha_alarm_code']
 bot_token = config['bot_token']
 allowed_chat_ids = config['allowed_chat_ids']
 allowed_users = config['allowed_users']
+admins = config['admins']
 fav_entities = config['fav_entities']
+
+if not isinstance(allowed_chat_ids, list):
+    allowed_chat_ids = [allowed_chat_ids]
+if not isinstance(allowed_users, list):
+    allowed_users = [allowed_users]
+if not isinstance(admins, list):
+    admins = [admins]
+if not isinstance(fav_entities, list):
+    fav_entities = [fav_entities]
 
 # instance the API connection to HASS
 api = remote.API(ha_url, ha_key, ha_port, ha_ssl)
@@ -368,10 +401,14 @@ cmd = BotCommand(bot)
 bot.message_loop(handle)
 print('I am listening...')
 
+if announce_chat_id:
+    print('Announcing restart to chat ID', announce_chat_id)
+    bot.sendMessage(announce_chat_id, 'Okay, I am back now :)')
+
 while not FORCE_RESTART:
     if FORCE_SHUTDOWN:
         sys.exit()
     time.sleep(1)
 
 print('Restarting...')
-restart_program()
+restart_program(RESTART_CHAT_ID)
