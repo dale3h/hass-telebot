@@ -14,16 +14,15 @@ pip3.5 install -r requirements.txt
 Create hass-telebot.cfg with entries as follows:
 
 ```
-ha_url = "<hass host/ip - no http/htts>"
+ha_url = "<hass host - no http/htts>"
 ha_key = "<you api password if any>"
 ha_port = "<hass port>"
-ha_ssl = "<true or '', depending on whether you are running ssl or not>"
+ha_ssl = "<true or false, depending on whether you are running ssl or not>"
 ha_alarm_entity = "<e.g. alarm_control_panel.ha_alarm>"
 ha_alarm_code = "<the alarm code you use for the alarm_control_panel component>"
 bot_token = "<the token for your Telegram bot>"
 allowed_chat_ids = "<list of Telegram chat ids in which you are talking to your bot>"
 fav_entities = "<space separated list of favourite entities (used by /favstates)>"
-show_maps = "<true or false whether you want maps to show for device locations>"
 ```
 
 Then you can run the bot with

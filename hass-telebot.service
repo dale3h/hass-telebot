@@ -1,0 +1,12 @@
+[Unit]
+Description=Home Assistant Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+ExecStart=/usr/local/bin/hass-telebot
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

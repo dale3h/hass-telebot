@@ -2,3 +2,4 @@ telepot
 argparse
 configobj
 homeassistant
+psutil
