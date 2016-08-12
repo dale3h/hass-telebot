@@ -1,4 +1,4 @@
-ha_url=your.hostname.com                     # do not include HTTP/HTTPS
+ha_url=localhost                             # do not include HTTP/HTTPS
 ha_key=apipassword                           # your home assistant password
 ha_port=8123                                 # default is 8123 for HTTP
 ha_ssl=                                      # if you use SSL, set this to true
